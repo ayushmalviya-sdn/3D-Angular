@@ -1,0 +1,32 @@
+.menu-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 97vh;
+    background-color: #282c34;
+  }
+  
+  .menu-title {
+    font-size: 4em;
+    color: #ffffff;
+    margin-bottom: 2em;
+  }
+  
+  .menu-button {
+    width: 200px;
+    padding: 1em;
+    margin: 1em;
+    font-size: 1.5em;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    color: #ffffff;
+    background-color: #61dafb;
+    transition: background-color 0.3s;
+  }
+  
+  .menu-button:hover {
+    background-color: #21a1f1;
+  }
+  
