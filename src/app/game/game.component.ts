@@ -33,13 +33,21 @@ export class GameComponent implements OnInit {
    score = 0;
   private fruitBoundingBox!: THREE.Box3; 
   private cubeBoundingBox!: THREE.Box3;
+  topdown: any;
   constructor(private router: Router) { }
 
   ngOnInit() {
     this.initThreeJs();
     this.addEventListeners();
   }
+  topDown(){
+    if(this.topdown){
+      this.topdown = !this.topdown
+    }else{
+      this.topdown = !this.topdown
+    }
 
+  }
   initThreeJs() {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,1,1000);
@@ -212,7 +220,13 @@ export class GameComponent implements OnInit {
     // this.updateMaterial(null);
     this.camera.position.x = this.cube.position.x; 
     this.camera.position.z = this.cube.position.z - 5; 
-    this.camera.position.y = this.cube.position.y + 2; 
+    if(this.topdown){
+      this.camera.position.y = this.cube.position.y + 60; 
+    }else{
+
+      this.camera.position.y = this.cube.position.y + 2; 
+    }
+    // this.camera.position.y = this.cube.position.y + 60; 
     this.camera.lookAt(this.cube.position); 
     this.renderer.render(this.scene, this.camera);
   }
