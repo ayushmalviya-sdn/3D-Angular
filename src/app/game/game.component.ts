@@ -1,5 +1,6 @@
 import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { timeout } from 'rxjs';
 import * as THREE from 'three';
 
 @Component({
@@ -27,6 +28,11 @@ export class GameComponent implements OnInit {
   private fruit!: THREE.Mesh;
   private light!: THREE.PointLight;
   private lightHelper!: THREE.PointLightHelper;
+  private sphereMaterial!: THREE.ShaderMaterial;
+  private alternateMaterial!: THREE.ShaderMaterial;
+   score = 0;
+  private fruitBoundingBox!: THREE.Box3; 
+  private cubeBoundingBox!: THREE.Box3;
   constructor(private router: Router) { }
 
   ngOnInit() {
@@ -39,66 +45,84 @@ export class GameComponent implements OnInit {
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,1,1000);
     // this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight);
     this.renderer = new THREE.WebGLRenderer();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.rendererContainer.nativeElement.appendChild(this.renderer.domElement);
-
-    // const geometry = new THREE.SphereGeometry();
-    // const material = new THREE.ShaderMaterial({
-    //   vertexShader: `
-    //     varying vec2 vUv;
-    //     void main() {
-    //       vUv = uv;
-    //       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    //     }
-    //   `,
-    //   fragmentShader: `
-    //     varying vec2 vUv;
-    //     void main() {
-    //       vec3 color1 = vec3(0.3, 0,0);
-    //       vec3 color2 = vec3(1, 0, 1);
-    //       vec3 color = mix(color1, color2, vUv.y);
-    //       gl_FragColor = vec4(color, 1.0);
-    //     }
-    //   `,
-    //   side: THREE.DoubleSide
-    // });
+    this.renderer.setSize(window.innerWidth , window.innerHeight-20);
+    // this.rendererContainer.nativeElement.appendChild(this.renderer.domElement);
     this.renderer.setClearColor(0x000000);
-    // this.cube = new THREE.Mesh(geometry, material);
     this.scene.add(this.cube);
 
     this.createBackground();
     this.createGround();
-    this.createEdibles();
     this.createBoundaries();
      this.camera.position.z = 10
     // this.setTopDownCamera()
-    this.renderer.setClearColor(0x000000); // Dark background
+    this.renderer.setClearColor(0x000000);
     this.rendererContainer.nativeElement.appendChild(this.renderer.domElement);
-
-    // Create the light
-    this.light = new THREE.PointLight(0xffffff, 9, 10); // color, intensity, distance
-    this.light.position.set(0, 5, 5); // Initial position
+    this.light = new THREE.PointLight(0xffffff, 9, 10); 
+    this.light.position.set(0, 5, 5); 
     this.scene.add(this.light);
-    const geometry = new THREE.BoxGeometry(1, 1, 1); // Adjust size if needed
-    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    this.cube = new THREE.Mesh(geometry, material);
+    const geometry = new THREE.SphereGeometry();
+      this.sphereMaterial = new THREE.ShaderMaterial({
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          void main() {
+            vec3 color1 = vec3(0.6, 0,0.2);
+            vec3 color2 = vec3(0.9, 0.6, 0.2);
+            vec3 color = mix(color1, color2, vUv.y);
+            gl_FragColor = vec4(color, 1.0);
+          }
+        `,
+        side: THREE.DoubleSide
+      });
+      this.alternateMaterial = new THREE.ShaderMaterial({
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          void main() {
+            vec3 color1 = vec3(1, 1,1);
+            vec3 color2 = vec3(0.9, 0.4, 0.2);
+            vec3 color = mix(color1, color2, vUv.y);
+            gl_FragColor = vec4(color, 1.0);
+          }
+        `,
+        side: THREE.DoubleSide
+      });
+    this.cube = new THREE.Mesh(geometry, this.sphereMaterial);
     this.scene.add(this.cube);
-
-    // Create the terrainwswww
     this.createGround();
     this.createBackground();
     this.createEdibles();
     this.createBoundaries();
-    
-    // Position the camera for a better view of the larger terrain
-    this.camera.position.set(this.cube.position.x,this.cube.position.y,this.cube.position.z); // Adjust if needed
-    this.camera.lookAt(this.cube.position); // Point the camera towards the cube
-
-    // Add light helper
+    this.camera.position.set(this.cube.position.x,this.cube.position.y,this.cube.position.z); 
+    this.camera.lookAt(this.cube.position); 
     this.lightHelper = new THREE.PointLightHelper(this.light, 1,0xff0000);
     this.scene.add(this.lightHelper);
     this.animate();
   }
+  updateMaterial(isCollision: boolean, duration: number = 0) {
+    if (isCollision) {
+      this.cube.material = this.alternateMaterial;
+      setTimeout(() => {
+        this.cube.material = this.sphereMaterial; 
+      }, duration);
+    } else {
+      this.cube.material = this.sphereMaterial;
+    }
+  }
+  
+
 
   createBackground() {
     const loader = new THREE.TextureLoader();
@@ -154,81 +178,29 @@ export class GameComponent implements OnInit {
 
     this.boundaries.push(...walls);
   }
-  // createEdibles() {
-  //   const geometry = new THREE.SphereGeometry();
-  //   const material = new THREE.ShaderMaterial({
-  //     vertexShader: `
-  //       varying vec2 vUv;
-  //       void main() {
-  //         vUv = uv;
-  //         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  //       }
-  //     `,
-  //     fragmentShader: `
-  //       varying vec2 vUv;
-  //       void main() {
-  //         vec3 color1 = vec3(0.3, 0,0);
-  //         vec3 color2 = vec3(1, 0, 1);
-  //         vec3 color = mix(color1, color2, vUv.y);
-  //         gl_FragColor = vec4(color, 1.0);
-  //       }
-  //     `,
-  //     side: THREE.DoubleSide
-  //   });
-  //   this.fruit = new THREE.Mesh(geometry, material);
-  //   this.fruit.position.z =  Math.floor(24 * Math.random());
-  //   this.fruit.position.x =  Math.floor(24 * Math.random());
-  //   this.scene.add(this.fruit);
-  // }
+ 
   setTopDownCamera() {
-    // this.camera.position.set(0, 40, 0);
-    this.camera.position.set(5, 2, -5); // Adjust the offset as needed
+  
+    this.camera.position.set(5, 2, -5); 
 
     this.camera.rotation.x = -Math.PI / 2;
   }
-  // createGround() {
-  //   const geometry = new THREE.PlaneGeometry(60, 60);
-  //   const material = new THREE.MeshBasicMaterial({ color: 0xbd8143, side: THREE.DoubleSide });
-  //   this.ground = new THREE.Mesh(geometry, material);
-  //   this.ground.rotation.x = - Math.PI / 2;
-  //   this.ground.position.y = -2;
-  //   this.scene.add(this.ground);
-  // }
+ 
   createGround() {
-    const terrainSize = 100; // Adjust size to be larger than the cube
+    const terrainSize = 100; 
     const geometry = new THREE.PlaneGeometry(terrainSize, terrainSize);
     const material = new THREE.MeshBasicMaterial({ color: 0xbd8143, side: THREE.DoubleSide });
     this.ground = new THREE.Mesh(geometry, material);
-    this.ground.rotation.x = -Math.PI / 2; // Rotate to lay flat
-    this.ground.position.y = -1; // Position it slightly below the cube
+    this.ground.rotation.x = -Math.PI / 2; 
+    this.ground.position.y = -1;
     this.scene.add(this.ground);
 }
-  // animate() {
-  //   requestAnimationFrame(() => this.animate());
-
-  //   this.updateControls();
-  //   if (this.cube.position.y > this.ground.position.y + 1) {
-  //     this.velocityY += this.gravity;
-  //     this.cube.position.y += this.velocityY;
-  //     if (this.cube.position.y <= this.ground.position.y + 1) {
-  //       this.cube.position.y = this.ground.position.y + 1;
-  //       this.velocityY = 0;
-  //     }
-  //   }
-  //   if (this.light.position.y > this.ground.position.y + 1) {
-  //     this.velocityY += this.gravity;
-  //     this.light.position.y += this.velocityY;
-  //     if (this.light.position.y <= this.ground.position.y + 1) {
-  //       this.light.position.y = this.ground.position.y + 1;
-  //       this.velocityY = 0;
-  //     }
-  //   }
-  //   this.renderer.render(this.scene, this.camera);
-  // }
+  
   animate() {
     requestAnimationFrame(() => this.animate());
   
     this.updateControls();
+    this.detectCollision(); 
     if (this.cube.position.y > this.ground.position.y + 1) {
       this.velocityY += this.gravity;
       this.cube.position.y += this.velocityY;
@@ -237,126 +209,76 @@ export class GameComponent implements OnInit {
         this.velocityY = 0;
       }
     }
-  
-    // Keep the camera behind the cube
-    this.camera.position.x = this.cube.position.x; // Follow the cube on x-axis
-    this.camera.position.z = this.cube.position.z - 5; // Follow behind on z-axis
-    this.camera.position.y = this.cube.position.y + 2; // Above the cube
-  
-    this.camera.lookAt(this.cube.position); // Look at the cube
-  
+    // this.updateMaterial(null);
+    this.camera.position.x = this.cube.position.x; 
+    this.camera.position.z = this.cube.position.z - 5; 
+    this.camera.position.y = this.cube.position.y + 2; 
+    this.camera.lookAt(this.cube.position); 
     this.renderer.render(this.scene, this.camera);
   }
   
-  // updateControls() {
-  //   if (this.moveForward) {
-  //     this.cube.position.z -= 0.1
-  //     if (this.cube.position.z < -24.5) {
-  //       this.cube.position.z = 0
-  //     }
-  //     console.log(Math.floor(this.cube.position.z),"cube");
-  //     console.log(Math.floor(this.fruit.position.z),"fruit");
-      
-  //     if(Math.floor(this.cube.position.z) == Math.floor(this.fruit.position.z)){
-  //       this.scene.add(this.cube);
-  //     }
-      
-  //   };
-  //   if (this.moveBackward) {
-  //     this.cube.position.z += 0.1
-  //     if (this.cube.position.z > 24.5) {
-  //       this.cube.position.z = 0
-  //     }
-     
-  //   };
-  //   if (this.moveLeft) {
-  //     this.cube.position.x -= 0.1
-  //     this.background.position.x -= 0.01
-  //     if (this.cube.position.x < -24.5) {
-  //       this.cube.position.x = 0
-  //     }
-  //   };
-  //   if (this.moveRight) {
-  //     this.cube.position.x += 0.1; this.background.position.x += 0.01
-  //     if (this.cube.position.x > 24.5) {
-  //       this.cube.position.x = 0
-  //     }
-  //   };
-  //   if (this.jump) this.cube.position.y += 0.1;
-  // }
-  createEdibles() {
-    const geometry = new THREE.SphereGeometry(1); // Adjust size as needed
-    const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    this.fruit = new THREE.Mesh(geometry, material);
-    this.fruit.position.z = Math.floor(50 * Math.random());
-    this.fruit.position.x = Math.floor(50 * Math.random());
-    this.scene.add(this.fruit);
+  
+//   createEdibles() {
+//     const geometry = new THREE.SphereGeometry(1); 
+//     const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+//     this.fruit = new THREE.Mesh(geometry, material);
+//     this.fruit.position.z = Math.floor(50 * Math.random());
+//     this.fruit.position.x = Math.floor(50 * Math.random());
+//     this.scene.add(this.fruit);
+// }
+
+// Update to create a new edible at random position after collision
+createEdibles() {
+  // this.updateMaterial(null)
+  const geometry = new THREE.SphereGeometry(1); 
+  const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  this.fruit = new THREE.Mesh(geometry, material);
+  this.fruit.position.set(
+    Math.floor(50 * Math.random()),
+    1,
+    Math.floor(50 * Math.random())
+  );
+  this.fruitBoundingBox = new THREE.Box3().setFromObject(this.fruit); 
+  this.scene.add(this.fruit);
 }
 
-//   updateControls() {
-//     const movementSpeed = 0.1;
-//     const terrainLimit = 50; // Half of the terrain size to keep within bounds
 
-//     if (this.moveForward) {
-//         this.cube.position.z -= movementSpeed;
-//         this.light.position.z -= movementSpeed;
-//         if (this.cube.position.z < -terrainLimit) {
-//             this.cube.position.z = -terrainLimit;
-//             this.light.position.z = -terrainLimit;
-//         }
-//     }
-//     if (this.moveBackward) {
-//         this.cube.position.z += movementSpeed;
-//         this.light.position.z += movementSpeed;
-//         if (this.cube.position.z > terrainLimit) {
-//             this.cube.position.z = terrainLimit;
-//             this.light.position.z = terrainLimit;
-//         }
-//     }
-//     if (this.moveLeft) {
-//         this.cube.position.x -= movementSpeed;
-//         this.light.position.x -= movementSpeed;
-//         if (this.cube.position.x < -terrainLimit) {
-//             this.cube.position.x = -terrainLimit;
-//             this.light.position.x = -terrainLimit;
-//         }
-//     }
-//     if (this.moveRight) {
-//         this.cube.position.x += movementSpeed;
-//         this.light.position.x += movementSpeed;
-//         if (this.cube.position.x > terrainLimit) {
-//             this.cube.position.x = terrainLimit;
-//             this.light.position.x = terrainLimit;
-//         }
-//     }
-//     if (this.jump) {
-//         this.cube.position.y += 0.1;
-//         this.light.position.y += 0.1;
-//     } else {
-//         // this.light.position.y = Math.max(this.light.position.y); // Keep light above ground
-//     }
-// }
+detectCollision() {
+  this.cubeBoundingBox = new THREE.Box3().setFromObject(this.cube);
+  
+  if (this.cubeBoundingBox.intersectsBox(this.fruitBoundingBox)) {
+    this.updateMaterial(true, 500); 
+    this.scene.remove(this.fruit); 
+    this.score++;
+    console.log(`Score: ${this.score}`);
+    this.createEdibles();
+  }
+  //  else {
+    
+  //   this.updateMaterial(false); 
+  // }
+}
 updateControls() {
   const movementSpeed = 0.1;
 
   if (this.moveForward) {
-    this.cube.position.z += movementSpeed * Math.cos(this.camera.rotation.y); // Forward based on camera's direction
+    this.cube.position.z += movementSpeed * Math.cos(this.camera.rotation.y); 
     this.cube.position.x += movementSpeed * Math.sin(this.camera.rotation.y);
   }
   if (this.moveBackward) {
-    this.cube.position.z -= movementSpeed * Math.cos(this.camera.rotation.y); // Backward based on camera's direction
+    this.cube.position.z -= movementSpeed * Math.cos(this.camera.rotation.y);
     this.cube.position.x -= movementSpeed * Math.sin(this.camera.rotation.y);
   }
   if (this.moveLeft) {
-    this.cube.position.z -= movementSpeed * Math.sin(this.camera.rotation.y); // Left based on camera's direction
+    this.cube.position.z -= movementSpeed * Math.sin(this.camera.rotation.y); 
     this.cube.position.x += movementSpeed * Math.cos(this.camera.rotation.y);
   }
   if (this.moveRight) {
-    this.cube.position.z += movementSpeed * Math.sin(this.camera.rotation.y); // Right based on camera's direction
+    this.cube.position.z += movementSpeed * Math.sin(this.camera.rotation.y);
     this.cube.position.x -= movementSpeed * Math.cos(this.camera.rotation.y);
   }
   if (this.jump) {
-    this.cube.position.y += 0.1; // Jump logic remains the same
+    this.cube.position.y += 0.1; 
   }
 }
 
