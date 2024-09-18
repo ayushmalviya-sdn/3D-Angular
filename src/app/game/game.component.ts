@@ -264,7 +264,7 @@ detectCollision() {
     this.updateMaterial(true, 500); 
     this.scene.remove(this.fruit); 
     this.score++;
-    console.log(`Score: ${this.score}`);
+    this.topDown();
     this.createEdibles();
   }
   //  else {
