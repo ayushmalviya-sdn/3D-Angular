@@ -67,7 +67,7 @@ export class GameComponent implements OnInit {
     this.createBackground();
     this.createGround();
     this.createBoundaries();
-    this.createMaze();
+    // this.createMaze();
     this.camera.position.z = 10
     // this.setTopDownCamera()
     this.renderer.setClearColor(0x000000);
